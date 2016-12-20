@@ -65,7 +65,7 @@ class Response
             case 'CNAME':
                 return $answer->target;
             default:
-                throw new InvalidArgumentException("unknown type {$answer->type}");
+                throw new InvalidArgumentException("unknown type: {$answer->type}");
         }
     }
 

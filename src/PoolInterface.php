@@ -2,7 +2,6 @@
 
 namespace React\Dns\Process;
 
-use React\Dns\Process\Request;
 use React\Promise\ExtendedPromiseInterface;
 
 interface PoolInterface
