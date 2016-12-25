@@ -23,10 +23,7 @@ class SocketWorker extends Worker
      */
     public static function fromEnvironment()
     {
-        return new static(
-            getenv('REACT_DNS_PROCESS_COOKIE'),
-            'tcp://127.0.0.1:' . getenv('REACT_DNS_PROCESS_PORT')
-        );
+        return new static(getenv('REACT_DNS_PROCESS_COOKIE'), 'tcp://127.0.0.1:' . getenv('REACT_DNS_PROCESS_PORT'));
     }
 
     /**
@@ -47,30 +44,23 @@ class SocketWorker extends Worker
 
     public function run()
     {
-        $stream = stream_socket_client($this->host);
-        if (!is_resource($stream)) {
+        $socket = stream_socket_client($this->host);
+        if (!is_resource($socket)) {
             throw new RuntimeException("unable to connect to {$this->host}");
         }
+        $this->send($socket, json_encode(['cookie' => $this->cookie]) . "\0");
+        $this->loop($socket, $socket);
+        fclose($socket);
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function send($stream, $message)
+    {
         stream_set_blocking($stream, true);
-        fwrite($stream, json_encode(['cookie' => $this->cookie]) . "\0");
+        fwrite($stream, $message);
         stream_set_blocking($stream, false);
-        $buffer = '';
-        while (1) {
-            if (($data = $this->wait($stream)) === false) {
-                break;
-            }
-            $buffer .= $data;
-            while (($message = $this->next($buffer)) !== false) {
-                if (($reply = $this->handle($message)) === false) {
-                    break 2;
-                } else {
-                    stream_set_blocking($stream, true);
-                    fwrite($stream, $reply);
-                    stream_set_blocking($stream, false);
-                }
-            }
-        };
-        fclose($stream);
     }
 
 }

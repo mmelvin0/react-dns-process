@@ -15,31 +15,13 @@ class Factory extends BaseFactory
      */
     public function createExecutor(LoopInterface $loop)
     {
-        return new Executor($this->createPool($loop));
-    }
-
-    /**
-     * @param LoopInterface $loop
-     * @param int $size
-     * @return PoolInterface
-     */
-    public function createPool(LoopInterface $loop, $size = null)
-    {
-        if ($this->isWindows()) {
-            $pool = new SocketPool($loop, $size);
+        if (strcasecmp('win', strtolower(substr(PHP_OS, 0, 3))) === 0) {
+            $pool = new SocketPool($loop);
         } else {
-            $pool = new Pool($loop, $size);
+            $pool = new Pool($loop);
         }
         $pool->start();
         return $pool;
-    }
-
-    /**
-     * @return bool
-     */
-    public function isWindows()
-    {
-        return strcasecmp('win', strtolower(substr(PHP_OS, 0, 3))) === 0;
     }
 
 }

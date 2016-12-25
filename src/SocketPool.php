@@ -5,7 +5,7 @@ namespace React\Dns\Process;
 use InvalidArgumentException;
 use React\ChildProcess\Process;
 use React\EventLoop\LoopInterface;
-use React\Socket\Connection;
+use React\Socket\ConnectionInterface;
 use React\Socket\Server;
 use React\Stream\Stream;
 use SplObjectStorage;
@@ -60,7 +60,7 @@ class SocketPool extends Pool
     public function stop()
     {
         if ($this->running) {
-            /** @var Connection $connection */
+            /** @var ConnectionInterface $connection */
             foreach ($this->connections as $connection) {
                 $connection->close();
             }
@@ -74,8 +74,8 @@ class SocketPool extends Pool
      */
     public function write($worker, $data)
     {
-        if (!($worker instanceof Connection)) {
-            throw new InvalidArgumentException('worker must be a ' . Connection::class);
+        if (!($worker instanceof ConnectionInterface)) {
+            throw new InvalidArgumentException('worker must be a ' . ConnectionInterface::class);
         }
         $worker->write($data);
     }
@@ -111,8 +111,8 @@ class SocketPool extends Pool
      */
     public function despawn($worker)
     {
-        if (!($worker instanceof Connection)) {
-            throw new InvalidArgumentException('worker must be a ' . Connection::class);
+        if (!($worker instanceof ConnectionInterface)) {
+            throw new InvalidArgumentException('worker must be a ' . ConnectionInterface::class);
         }
         $worker->close();
     }
@@ -124,7 +124,7 @@ class SocketPool extends Pool
     {
         parent::handleExit($process);
         $pid = $process->getPid();
-        /** @var Connection $connection */
+        /** @var ConnectionInterface $connection */
         foreach ($this->connections as $connection) {
             if ($this->connections[$connection] === $pid) {
                 $this->retry($connection);
@@ -150,18 +150,18 @@ class SocketPool extends Pool
     }
 
     /**
-     * @param Connection $connection
+     * @param ConnectionInterface $connection
      */
-    public function handleConnection(Connection $connection)
+    public function handleConnection(ConnectionInterface $connection)
     {
         $connection->on('close', [$this, 'handleClose']);
         $connection->on('data', $this->createOutputHandler($connection));
     }
 
     /**
-     * @param Connection $connection
+     * @param ConnectionInterface $connection
      */
-    public function handleClose(Connection $connection)
+    public function handleClose(ConnectionInterface $connection)
     {
         $this->available->detach($connection);
         $this->connections->detach($connection);

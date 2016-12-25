@@ -5,6 +5,9 @@ namespace React\Dns\Process;
 use InvalidArgumentException;
 use LogicException;
 use React\ChildProcess\Process;
+use React\Dns\Model\Message;
+use React\Dns\Query\ExecutorInterface;
+use React\Dns\Query\Query;
 use React\EventLoop\LoopInterface;
 use React\Promise\PromiseInterface;
 use React\Stream\Stream;
@@ -12,7 +15,7 @@ use RuntimeException;
 use SplObjectStorage;
 use SplQueue;
 
-class Pool implements PoolInterface
+class Pool implements ExecutorInterface
 {
 
     const MAX_MESSAGE_SIZE = 8192;
@@ -92,15 +95,23 @@ class Pool implements PoolInterface
     }
 
     /**
-     * @param Request $request
+     * @inheritdoc
      * @return PromiseInterface
      */
-    public function send(Request $request)
+    public function query($nameserver, Query $query)
     {
+        $request = new Request($query);
         $this->queue->enqueue($request);
         $this->flush();
-        return $request->promise()->then(function ($value) {
-            return new Response($value);
+        return $request->promise()->then(function (Response $response) use ($query) {
+            $message = new Message();
+            $message->questions[] = [
+                'name' => $query->name,
+                'type' => $query->type,
+                'class' => $query->class
+            ];
+            $message->answers = $response->getAnswers();
+            return $message;
         });
     }
 
@@ -255,7 +266,7 @@ class Pool implements PoolInterface
             $deferred = $request->getDeferred();
             if (isset($message->value) || isset($message->reason)) {
                 if (isset($message->value)) {
-                    $deferred->resolve($message->value);
+                    $deferred->resolve(new Response($message->value));
                 } else {
                     $deferred->reject($message->reason);
                 }

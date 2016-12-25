@@ -21,16 +21,26 @@ class Worker
 
     public function run()
     {
-        $stdin = fopen('php://stdin', 'r');
-        $stdout = fopen('php://stdout', 'w');
-        if (!is_resource($stdin)) {
-            throw new RuntimeException('unable to open stdin');
+        if (!is_resource(STDIN)) {
+            throw new RuntimeException('unable to open standard input');
         }
-        stream_set_blocking($stdin, false);
-        stream_set_blocking($stdout, true);
+        if (!is_resource(STDOUT)) {
+            throw new RuntimeException('unable to open standard output');
+        }
+        stream_set_blocking(STDIN, false);
+        stream_set_blocking(STDOUT, true);
+        $this->loop(STDIN, STDOUT);
+    }
+
+    /**
+     * @param resource $input
+     * @param resource $output
+     */
+    public function loop($input, $output)
+    {
         $buffer = '';
         while (1) {
-            if (($data = $this->wait($stdin)) === false) {
+            if (($data = $this->await($input)) === false) {
                 break;
             }
             $buffer .= $data;
@@ -38,27 +48,25 @@ class Worker
                 if (($reply = $this->handle($message)) === false) {
                     break 2;
                 } else {
-                    fwrite($stdout, $reply);
+                    $this->send($output, $reply);
                 }
             }
         };
-        fclose($stdin);
-        fclose($stdout);
     }
 
     /**
-     * @param resource $input
+     * @param resource $stream
      * @return int|bool
      */
-    public function wait($input)
+    public function await($stream)
     {
-        $read = [$input];
+        $read = [$stream];
         $write = $except = [];
         $result = stream_select($read, $write, $except, null);
         if ($result === false) {
             return false;
         }
-        $data = stream_get_contents($input);
+        $data = stream_get_contents($stream);
         if ($data === false || strlen($data) === 0) {
             return false;
         }
@@ -92,6 +100,15 @@ class Worker
     }
 
     /**
+     * @param resource $stream
+     * @param string $message
+     */
+    public function send($stream, $message)
+    {
+        fwrite($stream, $message);
+    }
+
+    /**
      * @param int $name
      * @param int $type
      * @return array
@@ -118,7 +135,7 @@ class Worker
                 for ($i = 0; $i < count($answers); $i++) {
                     $answer = $answers[$i];
                     if ($answer['type'] === 'A' && $answer['host'] !== $name && !isset($resolved[$answer['host']])) {
-                        $i -= $this->lookupCname($name, $answers, $i);
+                        $i -= $this->lookupCNAME($name, $answers, $i);
                         $resolved[$answer['host']] = 1;
                     } else if ($answer['type'] === 'CNAME' && !isset($resolved[$answer['target']])) {
                         $i -= $this->lookupCNAME($answer['target'], $answers, $i + 1);
@@ -136,7 +153,7 @@ class Worker
      * @param int $i
      * @return int
      */
-    public function lookupCname($name, &$answers, $i) {
+    public function lookupCNAME($name, &$answers, $i) {
         $cnames = dns_get_record($name, DNS_CNAME);
         if (is_array($cnames)) {
             array_splice($answers, $i, 0, $cnames);
