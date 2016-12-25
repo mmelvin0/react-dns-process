@@ -1,18 +1,14 @@
 <?php
 
-use React\Dns\Process\Executor;
-use React\Dns\Process\SocketPool;
-use React\Dns\Resolver\Resolver;
-use React\EventLoop\Factory;
+use React\Dns;
+use React\EventLoop;
 use React\Promise;
 
 require_once dirname(__DIR__) . '/vendor/autoload.php';
 
-$loop = Factory::create();
-$pool = new SocketPool($loop);
-$pool->start();
-$executor = new Executor($pool);
-$resolver = new Resolver('', $executor);
+$factory = new Dns\Process\Factory();
+$loop = EventLoop\Factory::create();
+$resolver = $factory->create('', $loop);
 $promises = [];
 foreach (array_slice($_SERVER['argv'], 1) as $name) {
     $promises[] = $resolver->resolve($name)->then(
@@ -20,9 +16,9 @@ foreach (array_slice($_SERVER['argv'], 1) as $name) {
             print "$name: $address" . PHP_EOL;
         },
         function ($reason) use ($name) {
-            print "$name: not found ($reason)" . PHP_EOL;
+            print "$name: not found ({$reason->getMessage()})" . PHP_EOL;
         }
     );
 }
-Promise\all($promises)->always([$pool, 'stop']);
+Promise\all($promises)->always([$loop, 'stop']);
 $loop->run();

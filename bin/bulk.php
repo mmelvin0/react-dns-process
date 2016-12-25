@@ -1,12 +1,7 @@
 <?php
 
-use React\Dns\Model\Message;
-use React\Dns\Process\Executor;
-use React\Dns\Process\SocketPool;
-use React\Dns\Process\Request;
-use React\Dns\Query\Query;
-use React\Dns\Resolver\Resolver;
-use React\EventLoop\Factory;
+use React\Dns\Process;
+use React\EventLoop;
 
 require_once dirname(__DIR__) . '/vendor/autoload.php';
 
@@ -23,12 +18,10 @@ $hosts = [
     'www.youtube.com'
 ];
 
-$loop = Factory::create();
-$pool = new SocketPool($loop);
-$pool->start();
-$executor = new Executor($pool);
-$resolver = new Resolver('', $executor);
-$timer = function () use ($pool, $resolver, $executor, $hosts, $loop, &$timer) {
+$loop = EventLoop\Factory::create();
+$factory = new Process\Factory();
+$resolver = $factory->create('', $loop);
+$timer = function () use ($resolver, $hosts, $loop, &$timer) {
     $promises = [];
     for ($i = 0; $i < 2000; $i++) {
         $name = $hosts[rand(0, count($hosts) - 1)];
@@ -43,6 +36,5 @@ $timer = function () use ($pool, $resolver, $executor, $hosts, $loop, &$timer) {
     });
 
 };
-
-$loop->addTimer(0.001, $timer);
+$loop->nextTick($timer);
 $loop->run();

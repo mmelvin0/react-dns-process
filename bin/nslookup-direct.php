@@ -1,10 +1,10 @@
 <?php
 
-use React\Dns\Process\SocketWorker;
+use React\Dns\Process\Worker;
 
 require_once dirname(__DIR__) . '/vendor/autoload.php';
 
-$worker = new SocketWorker('', '');
+$worker = new Worker();
 foreach (array_slice($_SERVER['argv'], 1) as $name) {
     $found = false;
     foreach ($worker->query($name, DNS_A) as $answer) {
