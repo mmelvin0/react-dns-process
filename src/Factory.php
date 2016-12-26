@@ -15,7 +15,7 @@ class Factory extends BaseFactory
      */
     public function createExecutor(LoopInterface $loop)
     {
-        if (strcasecmp('win', strtolower(substr(PHP_OS, 0, 3))) === 0) {
+        if (Util::isWindows()) {
             $pool = new SocketPool($loop);
         } else {
             $pool = new Pool($loop);
