@@ -10,6 +10,9 @@ use React\Promise\Deferred;
 use React\Promise\ExtendedPromiseInterface;
 use React\Promise\PromisorInterface;
 
+/**
+ * Represents a request from a pool to a worker.
+ */
 class Request implements JsonSerializable, PromisorInterface
 {
 
@@ -24,7 +27,9 @@ class Request implements JsonSerializable, PromisorInterface
     private $query;
 
     /**
-     * @param Query $query
+     * Create a request.
+     *
+     * @param Query $query The query associated with this request.
      */
     public function __construct(Query $query)
     {
@@ -33,6 +38,8 @@ class Request implements JsonSerializable, PromisorInterface
     }
 
     /**
+     * Get the deferred associated with this request.
+     *
      * @return Deferred
      */
     public function getDeferred()
@@ -41,6 +48,8 @@ class Request implements JsonSerializable, PromisorInterface
     }
 
     /**
+     * Get the query associated with this request.
+     *
      * @return Query
      */
     public function getQuery()
@@ -49,6 +58,8 @@ class Request implements JsonSerializable, PromisorInterface
     }
 
     /**
+     * Get the query type as expected by dns_get_record().
+     *
      * @return int
      */
     public function getType()
@@ -74,6 +85,8 @@ class Request implements JsonSerializable, PromisorInterface
     }
 
     /**
+     * Serialize the request to JSON.
+     *
      * @return array
      */
     public function jsonSerialize()
@@ -85,6 +98,8 @@ class Request implements JsonSerializable, PromisorInterface
     }
 
     /**
+     * Get the promise associated with this request.
+     *
      * @return ExtendedPromiseInterface
      */
     public function promise()

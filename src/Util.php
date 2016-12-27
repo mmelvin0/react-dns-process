@@ -2,10 +2,15 @@
 
 namespace React\Dns\Process;
 
+/**
+ * Utility functions.
+ */
 final class Util
 {
 
     /**
+     * Determine if the OS is Windows.
+     *
      * @return bool
      */
     public static function isWindows()

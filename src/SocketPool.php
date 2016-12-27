@@ -10,6 +10,19 @@ use React\Socket\Server;
 use React\Stream\Stream;
 use SplObjectStorage;
 
+/**
+ * DNS executor that runs queries in child processes that communicate via sockets.
+ *
+ * On Windows, async stdin/stdout doesn't work:
+ * + https://bugs.php.net/bug.php?id=34972
+ * + https://bugs.php.net/bug.php?id=48684
+ *
+ * So this implementation works around that by closing stdin/stdout/stderr on its child
+ * processes and instructing them to connect back to the socket this pool listens on.
+ *
+ * Child processes are provided with a one-time-use "cookie" which they must send for
+ * a connection to be authenticated. This prevents just anyone from connecting.
+ */
 class SocketPool extends Pool
 {
 
@@ -37,10 +50,17 @@ class SocketPool extends Pool
     private $port = 0;
 
     /**
+     * Socket server for handling connections from children.
+     *
      * @var Server
      */
     private $server;
 
+    /**
+     * Create a new socket pool.
+     *
+     * @inheritdoc
+     */
     public function __construct(LoopInterface $loop, $size = null)
     {
         parent::__construct($loop, $size);
@@ -48,6 +68,9 @@ class SocketPool extends Pool
         $this->server = new Server($loop);
     }
 
+    /**
+     * @inheritdoc
+     */
     public function start()
     {
         if (!$this->running) {
@@ -57,6 +80,9 @@ class SocketPool extends Pool
         parent::start();
     }
 
+    /**
+     * @inheritdoc
+     */
     public function stop()
     {
         if ($this->running) {
@@ -72,12 +98,12 @@ class SocketPool extends Pool
     /**
      * @inheritdoc
      */
-    public function write($worker, $data)
+    public function send($worker, $message)
     {
         if (!($worker instanceof ConnectionInterface)) {
             throw new InvalidArgumentException('worker must be a ' . ConnectionInterface::class);
         }
-        $worker->write($data);
+        $worker->write($message);
     }
 
     /**
@@ -150,6 +176,8 @@ class SocketPool extends Pool
     }
 
     /**
+     * Accept a connection from a worker.
+     *
      * @param ConnectionInterface $connection
      */
     public function handleConnection(ConnectionInterface $connection)
@@ -159,6 +187,8 @@ class SocketPool extends Pool
     }
 
     /**
+     * Handle worker disconnection.
+     *
      * @param ConnectionInterface $connection
      */
     public function handleClose(ConnectionInterface $connection)

@@ -5,6 +5,9 @@ namespace React\Dns\Process;
 use InvalidArgumentException;
 use RuntimeException;
 
+/**
+ * Worker process that communicates via socket.
+ */
 class SocketWorker extends Worker
 {
 
@@ -19,7 +22,7 @@ class SocketWorker extends Worker
     private $host;
 
     /**
-     * @return SocketWorker
+     * @inheritdoc
      */
     public static function fromEnvironment()
     {
@@ -27,8 +30,10 @@ class SocketWorker extends Worker
     }
 
     /**
-     * @param string $cookie
-     * @param string $host
+     * Create a socket worker.
+     *
+     * @param string $cookie Authentication cookie.
+     * @param string $host Host to connect to via stream_socket_client().
      */
     public function __construct($cookie, $host)
     {
@@ -42,15 +47,21 @@ class SocketWorker extends Worker
         $this->host = $host;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function run()
     {
         $socket = stream_socket_client($this->host);
         if (!is_resource($socket)) {
             throw new RuntimeException("unable to connect to {$this->host}");
         }
-        $this->send($socket, json_encode(['cookie' => $this->cookie]) . "\0");
-        $this->loop($socket, $socket);
-        fclose($socket);
+        try {
+            $this->send($socket, json_encode(['cookie' => $this->cookie]) . "\0");
+            $this->loop($socket, $socket);
+        } finally {
+            fclose($socket);
+        }
     }
 
     /**

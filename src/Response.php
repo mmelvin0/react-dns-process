@@ -6,6 +6,9 @@ use InvalidArgumentException;
 use React\Dns\Model\Message;
 use React\Dns\Model\Record;
 
+/**
+ * Represents a response from a worker for a pool.
+ */
 class Response
 {
 
@@ -15,7 +18,9 @@ class Response
     private $answers;
 
     /**
-     * @param array $answers
+     * Create a new response.
+     *
+     * @param array $answers Answers as returned by dns_get_record().
      */
     public function __construct(array $answers)
     {
@@ -23,6 +28,8 @@ class Response
     }
 
     /**
+     * Get answers in a format suitable for a React DNS message.
+     *
      * @return Record[]
      */
     public function getAnswers()
@@ -41,6 +48,8 @@ class Response
     }
 
     /**
+     * Get answer class in a format suitable for a React DNS message.
+     *
      * @param string $class
      * @return int
      */
@@ -54,6 +63,10 @@ class Response
     }
 
     /**
+     * Get the data for an answer given the answer type.
+     *
+     * This field is named differently by dns_get_record() but always called 'data' in a React DNS message.
+     *
      * @param object $answer
      * @return string
      */
@@ -70,6 +83,8 @@ class Response
     }
 
     /**
+     * Get answer type in a format suitable for a React DNS message.
+     *
      * @param string $type
      * @return int
      */

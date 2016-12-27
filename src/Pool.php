@@ -15,6 +15,11 @@ use RuntimeException;
 use SplObjectStorage;
 use SplQueue;
 
+/**
+ * DNS executor that runs queries in child processes.
+ *
+ * This pool communicates with its processes via stdin/stdout.
+ */
 class Pool implements ExecutorInterface
 {
 
@@ -33,11 +38,15 @@ class Pool implements ExecutorInterface
     protected $loop;
 
     /**
+     * Mapping of PID to process.
+     *
      * @var Process[]
      */
     protected $processes = [];
 
     /**
+     * Request queue.
+     *
      * @var SplQueue
      */
     protected $queue;
@@ -60,8 +69,10 @@ class Pool implements ExecutorInterface
     protected $size = 1;
 
     /**
-     * @param LoopInterface $loop
-     * @param int $size
+     * Create a process pool executor.
+     *
+     * @param LoopInterface $loop Event loop to use.
+     * @param int $size Number of processes to use.
      */
     public function __construct(LoopInterface $loop, $size = null)
     {
@@ -77,6 +88,9 @@ class Pool implements ExecutorInterface
         $this->requests = new SplObjectStorage();
     }
 
+    /**
+     * Start the process pool.
+     */
     public function start()
     {
         if ($this->running) {
@@ -86,6 +100,9 @@ class Pool implements ExecutorInterface
         $this->spawn();
     }
 
+    /**
+     * Stop the process pool.
+     */
     public function stop()
     {
         $this->running = false;
@@ -95,7 +112,11 @@ class Pool implements ExecutorInterface
     }
 
     /**
+     * Run a query.
+     *
      * @inheritdoc
+     * @param string $nameserver Ignored.
+     * @param Query $query The query to execute.
      * @return PromiseInterface
      */
     public function query($nameserver, Query $query)
@@ -115,6 +136,9 @@ class Pool implements ExecutorInterface
         });
     }
 
+    /**
+     * Flush queued requests to available workers.
+     */
     public function flush()
     {
         foreach ($this->available as $worker) {
@@ -125,15 +149,17 @@ class Pool implements ExecutorInterface
             $request = $this->queue->dequeue();
             $this->available->detach($worker);
             $this->requests->attach($worker, $request);
-            $this->write($worker, json_encode($request) . "\0");
+            $this->send($worker, json_encode($request) . "\0");
         }
     }
 
     /**
+     * Send a message to a worker.
+     *
      * @param object $worker
-     * @param string $data
+     * @param string $message
      */
-    public function write($worker, $data)
+    public function send($worker, $message)
     {
         if (!($worker instanceof Process)) {
             throw new InvalidArgumentException('worker must be a ' . Process::class);
@@ -141,10 +167,12 @@ class Pool implements ExecutorInterface
         if (!($worker->stdin instanceof Stream)) {
             throw new InvalidArgumentException('worker stdin must be a ' . Stream::class);
         }
-        $worker->stdin->write($data);
+        $worker->stdin->write($message);
     }
 
     /**
+     * Retry a request that was being handled by a (failed) worker.
+     *
      * @param object $worker
      */
     public function retry($worker)
@@ -158,6 +186,9 @@ class Pool implements ExecutorInterface
         $this->flush();
     }
 
+    /**
+     * Spawn child processes.
+     */
     public function spawn()
     {
         while ($this->running && count($this->processes) < $this->size) {
@@ -176,6 +207,8 @@ class Pool implements ExecutorInterface
     }
 
     /**
+     * Create environment variables for child process.
+     *
      * @return array
      */
     public function createEnvironment()
@@ -191,8 +224,10 @@ class Pool implements ExecutorInterface
     }
 
     /**
-     * @param Process $process
-     * @param array $env
+     * Hook that runs after a single child process has been spawned.
+     *
+     * @param Process $process The process that was spawned.
+     * @param array $env The environment used for the process.
      */
     public function postspawn(Process $process, array $env)
     {
@@ -211,6 +246,8 @@ class Pool implements ExecutorInterface
     }
 
     /**
+     * Destroy a worker.
+     *
      * @param object $worker
      */
     public function despawn($worker)
@@ -222,6 +259,8 @@ class Pool implements ExecutorInterface
     }
 
     /**
+     * Generate a callback to handle data from a worker.
+     *
      * @param object $worker
      * @return callable
      */
@@ -243,6 +282,8 @@ class Pool implements ExecutorInterface
     }
 
     /**
+     * Handle exit of a child process.
+     *
      * @param Process $process
      */
     public function handleExit(Process $process)
@@ -254,6 +295,8 @@ class Pool implements ExecutorInterface
     }
 
     /**
+     * Handle a message from a worker.
+     *
      * @param object $worker
      * @param object $message
      */

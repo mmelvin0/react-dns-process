@@ -4,10 +4,15 @@ namespace React\Dns\Process;
 
 use RuntimeException;
 
+/**
+ * Worker process that communicates via stdin/stdout.
+ */
 class Worker
 {
 
     /**
+     * Factory method to create a worker via environment variables.
+     *
      * @return Worker
      */
     public static function fromEnvironment()
@@ -19,6 +24,9 @@ class Worker
         }
     }
 
+    /**
+     * Run the worker.
+     */
     public function run()
     {
         if (!is_resource(STDIN)) {
@@ -33,6 +41,8 @@ class Worker
     }
 
     /**
+     * Worker input/output loop.
+     *
      * @param resource $input
      * @param resource $output
      */
@@ -55,8 +65,10 @@ class Worker
     }
 
     /**
-     * @param resource $stream
-     * @return int|bool
+     * Await data on a stream.
+     *
+     * @param resource $stream Stream to read from.
+     * @return string|bool Data read from the stream, or false if the stream closes/errors.
      */
     public function await($stream)
     {
@@ -74,8 +86,10 @@ class Worker
     }
 
     /**
-     * @param string $buffer
-     * @return object|bool
+     * Read the next message from a buffer.
+     *
+     * @param string $buffer Buffer to read from.
+     * @return object|bool Message object or false if no message is currently available.
      */
     public function next(&$buffer)
     {
@@ -88,8 +102,10 @@ class Worker
     }
 
     /**
-     * @param object $message
-     * @return string|bool
+     * Handle a request message from the pool.
+     *
+     * @param object $message Message to handle.
+     * @return string|bool Response message string or false if message is invalid.
      */
     public function handle($message)
     {
@@ -100,8 +116,10 @@ class Worker
     }
 
     /**
-     * @param resource $stream
-     * @param string $message
+     * Send a message on a stream.
+     *
+     * @param resource $stream Stream to send on.
+     * @param string $message Message to send.
      */
     public function send($stream, $message)
     {
@@ -109,8 +127,12 @@ class Worker
     }
 
     /**
-     * @param int $name
-     * @param int $type
+     * Perform DNS query.
+     *
+     * Uses dns_get_record() and shortcuts to gethostbyname() for A (address) queries.
+     *
+     * @param int $name The name to query.
+     * @param int $type The type of query to perform.
      * @return array
      */
     public function query($name, $type)
@@ -148,10 +170,12 @@ class Worker
     }
 
     /**
-     * @param string $name
-     * @param array $answers
-     * @param int $i
-     * @return int
+     * Resolve a CNAME and add it to the answer list in the same order that React DNS does.
+     *
+     * @param string $name The name to lookup.
+     * @param array $answers Current answer list.
+     * @param int $i Index to insert new answers at.
+     * @return int The number of records found.
      */
     public function lookupCNAME($name, &$answers, $i) {
         $cnames = dns_get_record($name, DNS_CNAME);

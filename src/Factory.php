@@ -3,10 +3,13 @@
 namespace React\Dns\Process;
 
 use React\Dns\Query\ExecutorInterface;
-use React\Dns\Resolver\Factory as BaseFactory;
+use React\Dns\Resolver;
 use React\EventLoop\LoopInterface;
 
-class Factory extends BaseFactory
+/**
+ * Extend the React DNS factory to create process executors.
+ */
+class Factory extends Resolver\Factory
 {
 
     /**
