@@ -1,5 +1,7 @@
 {
     "name": "mmelvin0/react-dns-process",
+    "description": "Process-based executor for React DNS",
+    "keywords": ["dns", "process", "react"],
     "type": "library",
     "license": "MIT",
     "authors": [
